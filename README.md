@@ -4,7 +4,23 @@ Gayrimenkul ilanı ekran görüntülerini (sahibinden / emlakjet vb.) yüklersin
 uygulama görüntüdeki yazıları okuyup (OCR) ilan alanlarını çıkarır ve sırayla
 tablonuza ekler. Her gün yeni fotoğraf ekledikçe verileriniz birikir.
 
-## 🚀 Çalıştırma (1 tık)
+## 📱 Telefonda kullanım (Canlı sürüm)
+
+Uygulama GitHub Pages üzerinde yayında — telefonda tarayıcıdan açmanız yeterli:
+
+> **https://hadolinn.github.io/ilan-analiz/**
+
+- Telefonda **aç** → **📸 Fotoğraf Seç** ile galeriden ekran görüntüsü yükleyin.
+- İstediğiniz zaman bu adresi **sabitlerseniz** (Ana Ekrana Ekle) uygulama gibi çalışır.
+- Veriler telefonunuzdaki tarayıcıda (IndexedDB) saklanır; sayfayı kapatsanız da kalır.
+- Klasör yazma özelliği (📁) yalnızca **Chrome** destekler; diğer tarayıcılarda **CSV/JSON**
+  indirerek verilerinizi yedekleyebilirsiniz.
+- ⚠️ İlk açılışta Türkçe dil verisi (~8 MB) indirilir, bu yüzden ilk kullanım birkaç saniye
+  sürer. Sonra önbelleğe alınır ve çok hızlı çalışır.
+
+Kaynak repo: **https://github.com/Hadolinn/ilan-analiz**
+
+## 🚀 Bilgisayarda çalıştırma (1 tık)
 
 1. `ilan-analiz` klasörüne girin.
 2. **`baslat.command`** dosyasına çift tıklayın.
