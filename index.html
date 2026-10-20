@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>">
 <title>İlan Analiz — Ekran Görüntüsü Okuyucu</title>
 <style>
@@ -180,7 +180,7 @@
 
   /* ---------- Mobil ---------- */
   @media (max-width:640px){
-    .topbar{gap:8px;padding:10px 12px}
+    .topbar{position:static;gap:8px;padding:10px 12px} /* mobil: yapışkan olmasın, içeriği kapatmasın */
     .brand small{display:none}
     .tb-actions{width:100%}
     .tb-actions .btn{padding:8px 9px;font-size:.78rem;white-space:normal}
@@ -198,6 +198,14 @@
     .editor-actions .btn{flex:1 1 100%}
     .toast{left:12px;right:12px;bottom:12px;max-width:none}
     details.cols>summary{font-size:.82rem;padding:8px 11px}
+    /* iOS Safari: odaklanan küçük girdi sayfayı yakınlaştırır -> 16px şart */
+    .fld input,.fld select,.fld textarea{font-size:16px}
+    .fld textarea{min-height:80px}
+    *{-webkit-tap-highlight-color:transparent}
+    .table-scroll{-webkit-overflow-scrolling:touch}
+    .toolbar .btn{flex:1 1 auto;white-space:nowrap}
+    .toolbar .switch{font-size:.78rem}
+    .editor-note{font-size:.74rem}
   }
 </style>
 </head>
@@ -238,8 +246,11 @@
       <p>veya tıklayarak seçin · <kbd>⌘/Ctrl + V</kbd> ile yapıştırabilirsiniz · aynı anda birden fazla fotoğraf</p>
     </div>
     <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    <input type="file" id="fileInputCam" accept="image/*" capture="environment" hidden>
     <div class="toolbar">
-      <label class="switch"><input type="checkbox" id="optPreprocess"> Görseli iyileştir (gri ton + büyüt)</label>
+      <button class="btn small accent" id="btnPick">📸 Galeriden Seç</button>
+      <button class="btn small" id="btnCam">📷 Fotoğraf Çek</button>
+      <label class="switch"><input type="checkbox" id="optPreprocess"> Görseli iyileştir</label>
       <label class="switch"><input type="checkbox" id="optThumbs" checked> Fotoğrafları kaydet</label>
       <button class="btn small" id="btnPaste">📄 Metin Yapıştır (OCR'suz)</button>
     </div>
@@ -451,24 +462,61 @@ function loadSettings(){
 }
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); }catch(e){} }
 
+const LS_KEY="ilan_analiz_listings_ls";
+let idbBroken=false;   // IndexedDB kullanılamıyorsa localStorage yedeğine geç
+
 async function loadListings(){
-  try{ state.listings=(await idbAll("listings"))||[]; }catch(e){ state.listings=[]; }
+  state.listings=[];
+  if(!idbBroken){
+    try{ state.listings=(await idbAll("listings"))||[]; return; }
+    catch(e){
+      console.warn("IndexedDB kullanılamıyor, localStorage yedeğine geçiliyor.", e);
+      idbBroken=true;
+    }
+  }
+  try{ const raw=localStorage.getItem(LS_KEY); state.listings=raw?JSON.parse(raw):[]; }
+  catch(e){ state.listings=[]; }
   renderTable();
 }
 async function persistListings(){
-  try{
-    // IndexedDB'a yaz
-    const db=await openDB();
-    await new Promise((res,rej)=>{
-      const tx=db.transaction("listings","readwrite");
-      const st=tx.objectStore("listings");
-      st.clear();
-      state.listings.forEach(l=>st.put(l));
-      tx.oncomplete=res; tx.onerror=()=>rej(tx.error);
-    });
-  }catch(e){ console.error("Kayıt hatası", e); }
+  if(idbBroken){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(state.listings)); }
+    catch(e){ console.error("Yedek kayıt hatası", e); }
+  } else {
+    try{
+      const db=await openDB();
+      await new Promise((res,rej)=>{
+        const tx=db.transaction("listings","readwrite");
+        const st=tx.objectStore("listings");
+        st.clear();
+        state.listings.forEach(l=>st.put(l));
+        tx.oncomplete=res; tx.onerror=()=>rej(tx.error);
+      });
+      saveLSBackup();
+    }catch(e){
+      console.error("Kayıt hatası", e);
+      idbBroken=true;
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(state.listings)); }catch(e2){}
+    }
+  }
   await saveToFolder();
   updateCount();
+}
+// IndexedDB kullanılamadığı durumlar için hafif (fotoğrafsız) yedek
+function saveLSBackup(){
+  try{
+    const slim=state.listings.map(l=>{ const c=Object.assign({},l); delete c.thumb; delete c.rawText; return c; });
+    const json=JSON.stringify(slim);
+    if(json.length<4000000) localStorage.setItem(LS_KEY, json);
+  }catch(e){}
+}
+async function requestPersistentStorage(){
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      const ok=await navigator.storage.persist();
+      console.log("Kalıcı depolama:", ok?"izni verildi":"izni verilmedi");
+    }
+  }catch(e){}
 }
 
 /* ============================================================
@@ -1135,6 +1183,9 @@ $("#btnClear").addEventListener("click",()=>{
 const dz=$("#dropZone"), fi=$("#fileInput");
 dz.addEventListener("click",()=>fi.click());
 fi.addEventListener("change",e=>{ addFiles(e.target.files); e.target.value=""; });
+$("#btnPick").addEventListener("click",e=>{ e.stopPropagation(); fi.click(); });
+$("#btnCam").addEventListener("click",e=>{ e.stopPropagation(); $("#fileInputCam").click(); });
+$("#fileInputCam").addEventListener("change",e=>{ addFiles(e.target.files); e.target.value=""; });
 ["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.add("drag"); }));
 ["dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.remove("drag"); }));
 dz.addEventListener("drop",e=>addFiles(e.dataTransfer.files));
@@ -1187,6 +1238,7 @@ function init(){
   renderQueue();
   updateFolderUI();
   loadSettings();
+  requestPersistentStorage();
   loadListings().then(restoreFolder);
   // Hata ayıklama / test için küçük bir müdahale noktası
   window.__ilanDebug = () => ({ listings: state.listings, csv: toCSV(state.listings), queue: state.queue.length, raw: state.queue.map(q => q.text), ready: state.queue.filter(q => q.status === "ready").length, pool: state.pool.length });

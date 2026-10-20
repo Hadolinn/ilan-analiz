@@ -13,8 +13,11 @@ Uygulama GitHub Pages üzerinde yayında — telefonda tarayıcıdan açmanız y
 - Telefonda **aç** → **📸 Fotoğraf Seç** ile galeriden ekran görüntüsü yükleyin.
 - İstediğiniz zaman bu adresi **sabitlerseniz** (Ana Ekrana Ekle) uygulama gibi çalışır.
 - Veriler telefonunuzdaki tarayıcıda (IndexedDB) saklanır; sayfayı kapatsanız da kalır.
-- Klasör yazma özelliği (📁) yalnızca **Chrome** destekler; diğer tarayıcılarda **CSV/JSON**
-  indirerek verilerinizi yedekleyebilirsiniz.
+- **iPhone 16 Plus / iOS Safari uyumlu:** 16px giriş alanları (yazı yakınlaşmaz), kamera butonu
+  (**📷 Fotoğraf Çek**), kalıcı depolama isteği ve IndexedDB yedeği ile iOS'a özel davranışlar
+  ele alınmıştır. IndexedDB kullanılamazsa veriler otomatik olarak localStorage yedeğine geçer.
+- Klasör yazma özelliği (📁) yalnızca **Chrome** destekler; iOS'ta bu buton gösterilmez/uyarı verilir.
+  Diğer tarayıcılarda **CSV/JSON** indirerek verilerinizi yedekleyebilirsiniz.
 - ⚠️ İlk açılışta Türkçe dil verisi (~8 MB) indirilir, bu yüzden ilk kullanım birkaç saniye
   sürer. Sonra önbelleğe alınır ve çok hızlı çalışır.
 
